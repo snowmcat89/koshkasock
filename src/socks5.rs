@@ -71,7 +71,7 @@ impl socksHandlAPi{
     pub async fn run_sck5(adrr: String,preg_stop : Arc<Mutex<bool>>,dur:Arc<Mutex<u64>>) -> Result<(), Box<dyn Error>>{
         while !*preg_stop.clone().lock().await{
             let socks_listner = TcpListener::bind(adrr.clone()).await?;
-            info!("SOCKS5 proxy listening on 127.0.0.1:1080");
+            info!("SOCKS5 proxy listening on {}", adrr.clone());
             let duration = {
                 let dur_lock = dur.lock().await;
                 tokio::time::Duration::from_secs(*dur_lock as u64)
