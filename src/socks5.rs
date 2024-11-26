@@ -9,8 +9,8 @@ use clap::error;
 
 
 pub struct ProxyHandleClient{
-    clients : Arc<Mutex<Vec<SocketAddr>>>,
-    max_clients : Arc<Mutex<usize>>,
+    pub clients : Arc<Mutex<Vec<SocketAddr>>>,
+    pub max_clients : Arc<Mutex<usize>>,
 }
 
 impl ProxyHandleClient{
