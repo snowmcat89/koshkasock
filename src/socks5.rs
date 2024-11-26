@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc, time::Duration};
+use std::{error::Error, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{io::AsyncReadExt, sync::Mutex, time};
 
 use log::{info, warn, error, debug, trace};
@@ -8,6 +8,30 @@ use tokio::net::{TcpListener,TcpStream};
 use clap::error;
 
 
+pub struct ProxyHandleClient{
+    clients : Arc<Mutex<Vec<SocketAddr>>>,
+    max_clients : Arc<Mutex<usize>>,
+}
+
+impl ProxyHandleClient{
+
+    pub async fn add_client(&self, adrr : SocketAddr)  {
+        println!("adding client {} ...",&adrr);
+        let client_cloned = self.clients.clone();
+        let sz_clients = (client_cloned.lock().await).len();
+        /*written ">=" reather than "==" for anymistake in code abt previous tasks / code in general */
+        if sz_clients >= *(self.max_clients.clone().lock().await){
+            error!("Maximum client number has reached ! ");
+        }else{
+            (client_cloned.lock().await).push(adrr);
+        }
+    }
+
+    pub async fn rm_client( &self, adrr_ptr : &SocketAddr){
+        println!("removing client {}...",adrr_ptr);
+        
+    }
+}
 
 
 
@@ -71,7 +95,7 @@ impl socksHandlAPi{
     pub async fn run_sck5(adrr: String,preg_stop : Arc<Mutex<bool>>,dur:Arc<Mutex<u64>>) -> Result<(), Box<dyn Error>>{
         while !*preg_stop.clone().lock().await{
             let socks_listner = TcpListener::bind(adrr.clone()).await?;
-            info!("SOCKS5 proxy listening on {}", adrr.clone());
+            info!("SOCKS5 proxy listening on 127.0.0.1:1080");
             let duration = {
                 let dur_lock = dur.lock().await;
                 tokio::time::Duration::from_secs(*dur_lock as u64)
