@@ -1,4 +1,4 @@
-use std::{error::Error, net::SocketAddr, sync::Arc, time::Duration};
+use std::{collections::HashMap, error::Error, fmt::format, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{io::AsyncReadExt, sync::Mutex, time};
 
 use log::{info, warn, error, debug, trace};
@@ -8,13 +8,13 @@ use tokio::net::{TcpListener,TcpStream};
 use clap::error;
 
 
-pub struct ProxyHandleClient{
-    clients : Arc<Mutex<Vec<SocketAddr>>>,
+pub struct ProxyHandleClient{ 
+    clients : Arc<Mutex<HashMap<String,SocketAddr>>>,
     max_clients : Arc<Mutex<usize>>,
 }
 
 impl ProxyHandleClient{
-
+    // add client
     pub async fn add_client(&self, adrr : SocketAddr)  {
         println!("adding client {} ...",&adrr);
         let client_cloned = self.clients.clone();
@@ -23,14 +23,29 @@ impl ProxyHandleClient{
         if sz_clients >= *(self.max_clients.clone().lock().await){
             error!("Maximum client number has reached ! ");
         }else{
-            (client_cloned.lock().await).push(adrr);
+            let newnumuser = sz_clients + 1;
+            (client_cloned.lock().await).insert(format!("CLIENT-{}", newnumuser),adrr );
         }
     }
 
-    pub async fn rm_client( &self, adrr_ptr : &SocketAddr){
-        println!("removing client {}...",adrr_ptr);
-        
+
+
+    // remove client 
+    pub async fn rm_client( &self, cln_name : String){
+
+        println!("removing {}...",&cln_name);
+        if let Some(cnt_sock_adrr) = (self.clients.clone().lock().await).remove(&cln_name){
+            info!(" {} have been remove seccessfuly from adress: {}...",cln_name,cnt_sock_adrr);
+
+        }else {
+            warn!("cannot remove {} , user is not found ",&cln_name);
+
+        }
+
+
+
     }
+    
 }
 
 
@@ -89,9 +104,13 @@ pub async fn handle_socks_client( mut stream : TcpStream ) -> Result<(), Box<dyn
 }
     
 
+
+
+// impl of the serverProgram
 pub struct socksHandlAPi {}
 
 impl socksHandlAPi{
+    // run our server socks5
     pub async fn run_sck5(adrr: String,preg_stop : Arc<Mutex<bool>>,dur:Arc<Mutex<u64>>) -> Result<(), Box<dyn Error>>{
         while !*preg_stop.clone().lock().await{
             let socks_listner = TcpListener::bind(adrr.clone()).await?;
