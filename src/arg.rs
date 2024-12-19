@@ -9,7 +9,7 @@ use crate::_constw::PORT_RANGE;
 
 #[derive(Debug,Parser)]
 pub struct KshkCli{
-    
+    #[arg(value_parser = parse_adrr)]
     pub adrr : Option<u16>,
     #[arg(short,long)]
     pub usr_name : String,
@@ -43,10 +43,10 @@ pub struct KshkCli{
 
 
 
-fn parse_adrr(adrr_ : String) -> Result<String,String>{
+fn parse_adrr<'a>(adrr_ : &'a str) -> Result<String,String>{
     let split_adrr : Vec<&str> = adrr_.split(':').collect();
     if PORT_RANGE.contains(&split_adrr[1].parse::<usize>().unwrap()) && split_adrr[0].parse::<Ipv4Addr>().is_ok() {
-        return Ok(adrr_);
+        return Ok(adrr_.to_string());
     }else {
         return Err(format!("couldn't parse the adress, incalid one !"));
     }
