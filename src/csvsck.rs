@@ -32,3 +32,8 @@ pub async fn check_user_csv_(user :&str, passwd : &str, csv_data : Arc<Mutex<Has
         }
     }
 }
+
+
+
+let var = String::from("houssam");
+var

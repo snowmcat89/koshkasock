@@ -1,31 +1,60 @@
-use std::{collections::HashMap, error::Error, fmt::format, net::SocketAddr, sync::Arc, time::Duration};
+use std::{borrow::Borrow, collections::HashMap, error::Error, fmt::format, io::Read, mem::uninitialized, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{io::AsyncReadExt, sync::Mutex, time};
-
+use std::io::stdin;
+use tokio::io::{self,AsyncWriteExt};
 use log::{info, warn, error, debug, trace};
 use env_logger;
-
+use std::net::Incoming;
 use tokio::net::{TcpListener,TcpStream};
 use clap::error;
 
 
 
-pub struct ProxyHandleClient{ 
-    clients : Arc<Mutex<HashMap<String,SocketAddr>>>,
+pub fn hndl_command() {
+    loop{
+        let mut cmdln = String::new();
+        match std::io::Stdin::read_line(&mut cmdln){
+            Ok(bfsize) => {
+                
+            }
+            
+            Err(err)
+        }
+    }
+}
+
+
+
+pub struct ProxyServerConfig{
+    adrr : String,
+    auth_supp : Arc<Mutex<bool>>,
+}
+
+
+
+pub trait ProxyHandleClient {
+    fn add_client (&self) ;
+}
+
+pub struct WithAuthProxy{ 
+    clients : Arc<Mutex<HashMap<String,(String,SocketAddr)>>>,
     max_clients : Arc<Mutex<usize>>,
 }
 
-impl ProxyHandleClient{
+impl WithAuthProxy{
     // add client
-    pub async fn add_client(&self, adrr : SocketAddr)  {
-        println!("adding client {} ...",&adrr);
-        let client_cloned = self.clients.clone();
+    pub async fn add_client(&self, adrr : SocketAddr, user_pass : AdrrSock )
+    {
+        
+        println!("adding client {} ...",adrr);
+    let client_cloned: Arc<Mutex<HashMap<String, (String, SocketAddr)>>>= self.clients.clone();
         let sz_clients = (client_cloned.lock().await).len();
         /*written ">=" reather than "==" for anymistake in code abt previous tasks / code in general */
         if sz_clients >= *(self.max_clients.clone().lock().await){
             error!("Maximum client number has reached ! ");
         }else{
-            let newnumuser = sz_clients + 1;
-            (client_cloned.lock().await).insert(format!("CLIENT-{}", newnumuser),adrr );
+            
+            (client_cloned.lock().await).insert(format!("CLIENT-{}", user_pass.usr_nm),(user_pass.pass,adrr) );
         }
     }
 
@@ -36,7 +65,7 @@ impl ProxyHandleClient{
 
         println!("removing {}...",&cln_name);
         if let Some(cnt_sock_adrr) = (self.clients.clone().lock().await).remove(&cln_name){
-            info!(" {} have been remove seccessfuly from adress: {}...",cln_name,cnt_sock_adrr);
+            info!(" {} have been remove seccessfuly from adress: {}...",cln_name,cnt_sock_adrr.1);
 
         }else {
             warn!("cannot remove {} , user is not found ",&cln_name);
@@ -107,52 +136,43 @@ pub async fn handle_socks_client( mut stream : TcpStream ) -> Result<(), Box<dyn
 
 
 
-// impl of the serverProgram
-pub struct socksHandlAPi {}
+pub struct SocksHandlApi {
+    configapi: ProxyServerConfig,
+}
 
-impl socksHandlAPi{
+impl SocksHandlApi {
     // run our server socks5
-    pub async fn run_sck5(adrr: String,preg_stop : Arc<Mutex<bool>>,dur:Arc<Mutex<u64>>) -> Result<(), Box<dyn Error>>{
-        while !*preg_stop.clone().lock().await{
-            let socks_listner = TcpListener::bind(adrr.clone()).await?;
-            info!("SOCKS5 proxy listening on 127.0.0.1:1080");
-            let duration = {
-                let dur_lock = dur.lock().await;
-                tokio::time::Duration::from_secs(*dur_lock as u64)
-            };
+    pub async fn run_sck5(&self, preg_stop: Arc<Mutex<bool>>, dur: Arc<Mutex<u64>>) -> Result<(), Box<dyn Error>> {
+        while !*preg_stop.clone().lock().await {
+            let socks_listner = TcpListener::bind(self.configapi.adrr.clone()).await?;
+            println!("SOCKS5 proxy listening on {}", self.configapi.adrr);
 
-
-            // steram
-            let mut stream = match tokio::time::timeout(/*dur */ duration,
-        async move {
-            socks_listner.accept().await}).await{
-                Ok(restream) => {
-                    match restream {
-                        Ok(res) => {
-                            let (strm,_) = res;
-                            strm
-                        },
+            let stream: TcpStream = match tokio::time::timeout(Duration::from_secs(*(dur.lock().await)), async {
+                socks_listner.accept().await
+            }).await {
+                Ok(result) => {
+                    match result {
+                        Ok((strm, _)) => strm,
                         Err(err) => {
-                            println!("[*] error while trying to bind server {}", err);
+                            println!("[*] Error while trying to bind server: {}", err);
                             continue;
                         }
                     }
                 }
-                Err(err) => {
-                    println!("[*] No connection has been recieved");
+                Err(_) => {
+                    println!("[*] No connection has been received");
                     continue;
                 }
             };
 
-
-
             // handling other stuffs
 
 
-
-
-
         }
+
         Ok(())
     }
 }
+
+
+

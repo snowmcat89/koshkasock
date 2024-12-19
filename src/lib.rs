@@ -14,8 +14,14 @@ pub mod csvsck;
 
 
 pub mod _constw {
+    use std::ops::RangeInclusive;
 
-            pub const SOCKS_VERSION_ : u8 = 0x05; 
+
+
+            pub const PORT_RANGE : RangeInclusive<usize> = 1..=65535;
+
+
+            pub const SOCKS_VERSION_ : u8 = 0x05;
             
 
             // Accepted server req
@@ -29,6 +35,9 @@ pub mod _constw {
             pub const SOCKS_CNT_CONN_REQ:               u8 = 0x01;
             pub const SOCKS_CNT_BIND_REQ:               u8 = 0x02;
             pub const SOCKS_CNT_UDP_ASSO:               u8 = 0x03;
+
+
+            
             
 
 }
